@@ -35,19 +35,21 @@ function procat_ci_docker_init {
 	# }
 	#
 	local readonly this_script="$0"
+	# CI_JOB_ID will be specified when running from GitLab CI
 	if [ -n "${CI_JOB_ID-}" ]; then
-		pc_log "procat_ci_docker_init() : Triggering pinentry for docker login from the PROCAT_CI_GPG_AGENT_PASS environment variable..."
+		pc_log "procat_ci_docker_init()          : Triggering pinentry for docker login from the PROCAT_CI_GPG_AGENT_PASS environment variable..."
 		if [ -z "${PROCAT_CI_GPG_AGENT_PASS-}" ]; then
-			pc_log_fatal "procat_ci_docker_init() : the PROCAT_CI_GPG_AGENT_PASS environment variable has not been set"		
+			pc_log_fatal "Project Catalysts CI environment setting has not been specified : PROCAT_CI_GPG_AGENT_PASS"
 		fi
 		echo ${PROCAT_CI_GPG_AGENT_PASS} | gpg --pinentry-mode loopback --passphrase-fd 0 --yes --clearsign -o /dev/null ${this_script}
 	else
 		# Force pinentry if needed only when not running as a gitlab build job
-		pc_log "procat_ci_docker_init() : Triggering pinentry for docker login from the local console..."
+		pc_log "procat_ci_docker_init()          : Triggering pinentry for docker login from the local console..."
+		pc_log ""
 		export GPG_TTY=$(tty)
 		pass show docker-credential-helpers/docker-pass-initialized-check > /dev/null
 	fi
-	log "procat_ci_docker_init() : Listing gpg info and status...."
+	pc_log "procat_ci_docker_init()          : Listing gpg info and status...."
 	gpg-connect-agent 'keyinfo --list' /bye	
 	#
 	# If we ever wanted to force the gpg agent to forget the password we could use this command:
@@ -149,14 +151,14 @@ function procat_ci_docker_build_image {
 		#
 		pc_log "Building image : ${package_name}"
 		pc_log "Build args     : ${build_args}"
-		pc_exec "docker build --pull --no-cache=${no_cache_flag} -t ${package_name}:latest ${build_args} ."
+		pc_exec "docker build --pull --no-cache=${no_cache_flag} --tag ${package_name}:latest ${build_args} ."
 		package_version="latest" 
 	else
         build_args="--build-arg package_version=${package_version} ${build_args}"
 
 		pc_log "Building image : ${package_name}, version ${package_version}"
 		pc_log "Build args     : ${build_args}"
-		pc_exec "docker build --pull --no-cache=${no_cache_flag} -t ${package_name}:${package_version} ${build_args} ."
+		pc_exec "docker build --pull --no-cache=${no_cache_flag} --tag ${package_name}:${package_version} ${build_args} ."
 		
 		if [ ! -z "${package_is_latest}" ]; then
 			if [ ${package_is_latest} == "latest" ]; then

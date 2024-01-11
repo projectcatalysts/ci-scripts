@@ -16,12 +16,14 @@ function procat_ci_download {
 	local readonly dst_filepath=${dst_path}/${dst_filename}
     local status_code=200
     if [ ! -f ${dst_filepath} ]; then
-    	pc_log "Downloading ${dst_filename} to ${dst_filepath}"
+        pc_log "Downloading                      : ${dst_filename} to ${dst_filepath}"
         status_code=$(curl --silent --write-out "%{http_code}" -o ${dst_filepath} -jksSL ${src_path})
     else
         if [ ${no_cache_flag} == "true" ]; then
-            pc_log "Downloading ${dst_filename} to verify latest version"
+            pc_log "Downloading (cache ignored)      : ${dst_filename} to ${dst_filepath}"
             status_code=$(curl --silent --write-out "%{http_code}" -o ${dst_filepath} -z ${dst_filepath} -jksSL ${src_path})
+        else
+            pc_log "Using cached download            : ${dst_filename}"
         fi
     fi
 

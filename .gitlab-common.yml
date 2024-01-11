@@ -1,42 +1,39 @@
 .gitlab-build:
   stage: build
   script:
-    - export PROCAT_CI_LIBRARY_PATH=$(mktemp -d)
-    - git clone -q --depth 1 "$PROCAT_CI_LIBRARY_REPO" "$PROCAT_CI_LIBRARY_PATH"
-    - echo ${PROCAT_CI_LIBRARY_REPO}
-    - echo ${PROCAT_CI_LIBRARY_PATH}
+    - export PROCAT_CI_SCRIPTS_PATH=$(mktemp -d)
+    - echo ${PROCAT_CI_SCRIPTS_REPO}
+    - echo ${PROCAT_CI_SCRIPTS_PATH}
+    - git clone -q --depth 1 "$PROCAT_CI_SCRIPTS_REPO" "$PROCAT_CI_SCRIPTS_PATH"
     - echo ${CI_API_V4_URL}
     - echo ${CI_PROJECT_ID}
     - echo ${CI_COMMIT_BRANCH}
     - echo ${CI_REGISTRY_IMAGE}
     - echo ${PACKAGE_VERSION}
-    - local _build_script="${PROCAT_CI_SCRIPT_BUILD:-./build.sh}"
-    - ${_build_script} ${CI_REGISTRY_IMAGE} ${PACKAGE_VERSION}
+    - ${PROCAT_CI_SCRIPT_BUILD:-./build.sh} ${CI_REGISTRY_IMAGE} ${PACKAGE_VERSION}
 
 .gitlab-test:
   stage: test
   script:
-    - export PROCAT_CI_LIBRARY_PATH=$(mktemp -d)
-    - git clone -q --depth 1 "$PROCAT_CI_LIBRARY_REPO" "$PROCAT_CI_LIBRARY_PATH"
-    - echo ${PROCAT_CI_LIBRARY_REPO}
-    - echo ${PROCAT_CI_LIBRARY_PATH}
+    - export PROCAT_CI_SCRIPTS_PATH=$(mktemp -d)
+    - echo ${PROCAT_CI_SCRIPTS_REPO}
+    - echo ${PROCAT_CI_SCRIPTS_PATH}
+    - git clone -q --depth 1 "$PROCAT_CI_SCRIPTS_REPO" "$PROCAT_CI_SCRIPTS_PATH"
     - echo ${CI_API_V4_URL}
     - echo ${CI_PROJECT_ID}
     - echo ${CI_COMMIT_BRANCH}
     - echo ${PACKAGE_VERSION}
-    - local _test_script="${PROCAT_CI_SCRIPT_TEST:-./test.sh}"
-    - ${_test_script} ${PACKAGE_VERSION}
+    - ${PROCAT_CI_SCRIPT_TEST:-./build.sh} ${PACKAGE_VERSION}
 
 .gitlab-publish:
   stage: publish
   script:
-    - export PROCAT_CI_LIBRARY_PATH=$(mktemp -d)
-    - git clone -q --depth 1 "$PROCAT_CI_LIBRARY_REPO" "$PROCAT_CI_LIBRARY_PATH"
-    - echo ${PROCAT_CI_LIBRARY_REPO}
-    - echo ${PROCAT_CI_LIBRARY_PATH}
+    - export PROCAT_CI_SCRIPTS_PATH=$(mktemp -d)
+    - echo ${PROCAT_CI_SCRIPTS_REPO}
+    - echo ${PROCAT_CI_SCRIPTS_PATH}
+    - git clone -q --depth 1 "$PROCAT_CI_SCRIPTS_REPO" "$PROCAT_CI_SCRIPTS_PATH"
     - echo ${CI_API_V4_URL}
     - echo ${CI_PROJECT_ID}
     - echo ${CI_COMMIT_BRANCH}
     - echo ${PACKAGE_VERSION}
-    - local _publish_script="${PROCAT_CI_SCRIPT_TEST:-./publish.sh}"
-    - ${_publish_script} ${PACKAGE_VERSION}
+    - ${PROCAT_CI_SCRIPT_PUBLISH:-./build.sh} ${PACKAGE_VERSION}

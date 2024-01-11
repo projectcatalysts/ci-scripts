@@ -62,16 +62,39 @@ readonly _procat_ci_library_path=${tmp}
 #
 # Include the core library functions (i.e. the functions typically required by all CI scripts)
 #
-source ${_procat_ci_library_path}/lib/log.sh
-source ${_procat_ci_library_path}/lib/docker.sh
-source ${_procat_ci_library_path}/lib/download.sh
-source ${_procat_ci_library_path}/lib/semver.sh
-source ${_procat_ci_library_path}/lib/ssh.sh
+if [ ! -f "${_procat_ci_library_path}/core/log.sh" ]; then
+    echo "ERROR: Project Catalysts CI core library file not found : ${_procat_ci_library_path}/core/log.sh"
+    return 1
+fi
+if [ ! -f "${_procat_ci_library_path}/core/docker.sh" ]; then
+    echo "ERROR: Project Catalysts CI core library file not found : ${_procat_ci_library_path}/core/docker.sh"
+    return 1
+fi
+if [ ! -f "${_procat_ci_library_path}/core/download.sh" ]; then
+    echo "ERROR: Project Catalysts CI core library file not found : ${_procat_ci_library_path}/core/download.sh"
+    return 1
+fi
+if [ ! -f "${_procat_ci_library_path}/core/semver.sh" ]; then
+    echo "ERROR: Project Catalysts CI core library file not found : ${_procat_ci_library_path}/core/semver.sh"
+    return 1
+fi
+if [ ! -f "${_procat_ci_library_path}/core/ssh.sh" ]; then
+    echo "ERROR: Project Catalysts CI core library file not found : ${_procat_ci_library_path}/core/ssh.sh"
+    return 1
+fi
+
+# Load the logging library first (just in case sourcing of
+# the other library functions causes an error).
+source ${_procat_ci_library_path}/core/log.sh
+source ${_procat_ci_library_path}/core/docker.sh
+source ${_procat_ci_library_path}/core/download.sh
+source ${_procat_ci_library_path}/core/semver.sh
+source ${_procat_ci_library_path}/core/ssh.sh
 
 #
 # If the library path export hasn't been set, we can set it now
 # since we know where the library resides!
 #
-if [ -z ${PROCAT_CI_LIBRARY_PATH+x} ]; then
-    export PROCAT_CI_LIBRARY_PATH=${_procat_ci_library_path}
+if [ -z ${PROCAT_CI_SCRIPTS_PATH+x} ]; then
+    export PROCAT_CI_SCRIPTS_PATH=${_procat_ci_library_path}
 fi
