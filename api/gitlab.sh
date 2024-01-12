@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eu
 
 # ---------------------------------------------------------------------
 # Settings
@@ -46,6 +46,35 @@ function gitlab_get_project {
 	local _uri=$(gitlab_project_uri ${_project_id})
 	local _response=$(gitlab_get ${_uri} ${_token})
 	gitlab_handle_error "Failed to get the project: ${_project_id}" "${_response}"
+	jq . <<< ${_response}
+}
+
+#
+# gitlab_get_project_latest_pipeline
+#
+function gitlab_get_project_latest_pipeline {
+	local _token=${1}
+	local _project_id=${2}
+	local _branch=${3}
+	local _status=${4}
+
+	local _uri=$(gitlab_project_uri ${_project_id} /pipelines?ref=${_branch}\&status=${_status}\&per_page=1\&page=1)
+	local _response=$(gitlab_get ${_uri} ${_token})
+	gitlab_handle_error "Failed to get the project pipeline: ${_project_id}" "${_response}"
+	jq . <<< ${_response}
+}
+
+#
+# gitlab_get_project_pipeline_jobs
+#
+function gitlab_get_project_pipeline_jobs {
+	local _token=${1}
+	local _project_id=${2}
+	local _pipeline_id=${3}
+
+	local _uri=$(gitlab_project_uri ${_project_id} /pipelines/${_pipeline_id}/jobs)
+	local _response=$(gitlab_get ${_uri} ${_token})
+	gitlab_handle_error "Failed to get the pipeline jobs for project: ${_project_id}" "${_response}"
 	jq . <<< ${_response}
 }
 

@@ -35,8 +35,8 @@ function procat_ci_docker_init {
 	# }
 	#
 	local readonly this_script="$0"
-	# CI_JOB_ID will be specified when running from GitLab CI
-	if [ -n "${CI_JOB_ID-}" ]; then
+	# CI will be specified when running from GitLab CI
+	if [ -n "${CI-}" ]; then
 		pc_log "procat_ci_docker_init()          : Triggering pinentry for docker login from the PROCAT_CI_GPG_AGENT_PASS environment variable..."
 		if [ -z "${PROCAT_CI_GPG_AGENT_PASS-}" ]; then
 			pc_log_fatal "Project Catalysts CI environment setting has not been specified : PROCAT_CI_GPG_AGENT_PASS"
