@@ -23,7 +23,7 @@
     - echo ${CI_PROJECT_ID}
     - echo ${CI_COMMIT_BRANCH}
     - echo ${PACKAGE_VERSION}
-    - ${PROCAT_CI_SCRIPT_TEST:-./build.sh} ${PACKAGE_VERSION}
+    - ${PROCAT_CI_SCRIPT_TEST:-./test.sh} ${PACKAGE_VERSION}
 
 .gitlab-publish:
   stage: publish
@@ -36,4 +36,4 @@
     - echo ${CI_PROJECT_ID}
     - echo ${CI_COMMIT_BRANCH}
     - echo ${PACKAGE_VERSION}
-    - ${PROCAT_CI_SCRIPT_PUBLISH:-./build.sh} ${PACKAGE_VERSION}
+    - ${PROCAT_CI_SCRIPT_PUBLISH:-./publish.sh} ${PACKAGE_VERSION}
