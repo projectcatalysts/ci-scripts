@@ -1,7 +1,11 @@
 #!/bin/bash -eu
-
+GITHUB_URL="https://github.com"
+GITHUB_URL_API="https://api.github.com"
+GITHUB_URL_UPLOAD="https://uploads.github.com"
 GITHUB_API_VERSION="2022-11-28"
 GITHUB_DEFAULT_PAGE_COUNT=30
+GITHUB_DEFAULT_ACCEPT='application/vnd.github+json'
+GITHUB_DEFAULT_CONTENT_TYPE='application/json'
 
 # ---------------------------------------------------------------------
 # Settings
@@ -107,7 +111,7 @@ function github_release_create {
 	local _is_pre_release=${6:-true}
 
 	local _uri=$(github_repo_uri ${_owner} ${_repo} "releases" )
-	local _response=$(github_post ${_uri} ${_token} <(jq --null-input \
+	local _response=$(github_post ${_uri} ${_token} ${GITHUB_DEFAULT_CONTENT_TYPE} <(jq --null-input \
 		--arg branch "${_branch}" \
 		--arg tagName "${_tag_name}" \
 		--argjson isDraft ${_is_draft} \
@@ -126,6 +130,95 @@ function github_release_create {
 	jq . <<< ${_response}
 }
 
+#
+# github_release_assets_list
+#
+function github_release_assets_list {
+	local _token=${1}
+	local _owner=${2}
+	local _repo=${3}
+	local _release_id=${4}
+
+	local _uri=$(github_repo_uri ${_owner} ${_repo} "releases/${_release_id}/assets")
+	local _response=$(github_get ${_uri} ${_token})
+	github_handle_error "Failed to list the release assets: ${_owner}/${_repo}/${_release_id}" "${_response}"
+	jq . <<< ${_response}
+}
+
+#
+# github_release_asset_create
+#
+function github_release_asset_create {
+	local _token=${1}
+	local _owner=${2}
+	local _repo=${3}
+	local _release_id=${4}
+	local _content_type=${5}
+	local _file_name=${6}
+	local _file_path=${7}
+
+	local _uri=$(github_repo_uri ${_owner} ${_repo} "releases/${_release_id}/assets?name=${_file_name}")
+	local _silent='--silent --show-error'
+
+	pc_log "  github_release_asset_create ${_uri} '${_file_path}'"
+	local _response=$(curl ${_silent} \
+		-X POST \
+		-H "Content-Type: ${_content_type}" \
+		-H "Accept: ${GITHUB_DEFAULT_ACCEPT}" \
+		-H "Authorization: Bearer ${_token}" \
+		-H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
+		${GITHUB_URL_UPLOAD}${_uri} \
+		-d "@${_file_path}" \
+		2>&1 \
+	)
+	_curl_exit_code=$?
+
+	# Log the request payload if curl returned an error
+	# If we discover any requests that contain sensitive information we'll need to revist this approach!
+	if [ $_curl_exit_code != 0 ]; then
+		pc_log "  curl returned an error exit code: ${_curl_exit_code}"
+		return ${_curl_exit_code}
+	fi
+	github_handle_error "Failed to create the release asset: ${_owner}/${_repo}/${_release_id}/${_file_name}" "${_response}"
+	jq . <<< ${_response}
+}
+
+#
+# github_release_asset_delete
+#
+function github_release_asset_delete {
+	local _token=${1}
+	local _owner=${2}
+	local _repo=${3}
+	local _asset_id=${4}
+
+	local _uri=$(github_repo_uri ${_owner} ${_repo} "releases/assets/${_asset_id}")
+	local _silent='--silent --show-error'
+
+	pc_log "  github_release_asset_delete ${_uri}"
+	local _response=$(curl ${_silent} \
+		-X DELETE \
+		-H "Accept: ${GITHUB_DEFAULT_ACCEPT}" \
+		-H "Authorization: Bearer ${_token}" \
+		-H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
+		${_github_api_url}${_uri} \
+		2>&1 \
+	)
+	_curl_exit_code=$?
+
+	# Log the request payload if curl returned an error
+	# If we discover any requests that contain sensitive information we'll need to revist this approach!
+	if [ $_curl_exit_code != 0 ]; then
+		pc_log "  curl returned an error exit code: ${_curl_exit_code}"
+		return ${_curl_exit_code}
+	fi
+	# A blank response indicates success
+	if [[ ! -z "${_response}" ]]; then
+		github_handle_error "Failed to delete the release asset: ${_owner}/${_repo}/${_asset_id}" "${_response}"
+		jq . <<< ${_response}
+	fi
+}
+
 # ---------------------------------------------------------------------
 # Common helpers
 # ---------------------------------------------------------------------
@@ -137,8 +230,11 @@ function github_get {
 	local _github_http_action=GET
 	local _github_http_uri=${1}
 	local _github_http_token=${2:--}
-	local _github_payload_filepath=-
-	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_payload_filepath} ${@:3}
+	local _github_content_type=${3:--}
+	local _github_payload_filepath=${4:--}
+
+	local _github_content_type
+	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_content_type} ${_github_payload_filepath} ${@:5}
 }
 
 #
@@ -148,8 +244,10 @@ function github_list {
 	local _github_http_action=LIST
 	local _github_http_uri=${1}
 	local _github_http_token=${2:--}
-	local _github_payload_filepath=-
-	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_payload_filepath} ${@:3}
+	local _github_content_type=${3:--}
+	local _github_payload_filepath=${4:--}
+
+	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_content_type} ${_github_payload_filepath} ${@:5}
 }
 
 #
@@ -159,8 +257,10 @@ function github_post {
 	local _github_http_action=POST
 	local _github_http_uri=${1}
 	local _github_http_token=${2:--}
-	local _github_payload_filepath=${3:--}
-	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_payload_filepath} ${@:4}
+	local _github_content_type=${3:--}
+	local _github_payload_filepath=${4:--}
+
+	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_content_type} ${_github_payload_filepath} ${@:5}
 }
 
 #
@@ -170,8 +270,10 @@ function github_put {
 	local _github_http_action=PUT
 	local _github_http_uri=${1}
 	local _github_http_token=${2:--}
-	local _github_payload_filepath=${3:--}
-	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_payload_filepath} ${@:4}
+	local _github_content_type=${3:--}
+	local _github_payload_filepath=${4:--}
+
+	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_content_type} ${_github_payload_filepath} ${@:5}
 }
 
 #
@@ -181,8 +283,10 @@ function github_patch {
 	local _github_http_action=PATCH
 	local _github_http_uri=${1}
 	local _github_http_token=${2:--}
-	local _github_payload_filepath=${3:--}
-	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_payload_filepath} ${@:4}
+	local _github_content_type=${3:--}
+	local _github_payload_filepath=${4:--}
+
+	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_content_type} ${_github_payload_filepath} ${@:5}
 }
 
 
@@ -193,8 +297,10 @@ function github_delete {
 	local _github_http_action=DELETE
 	local _github_http_uri=${1}
 	local _github_http_token=${2:--}
-	local _github_payload_filepath=${3:--}
-	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_payload_filepath} ${@:4}
+	local _github_content_type=${3:--}
+	local _github_payload_filepath=${4:--}
+
+	github_exec ${_github_http_action} ${_github_http_uri} ${_github_http_token} ${_github_content_type} ${_github_payload_filepath} ${@:5}
 }
 
 
@@ -210,10 +316,13 @@ function github_exec {
 	local _github_http_action=${1}
 	local _github_http_uri=${2}
 	local _github_http_token=${3:--}
-	local _github_payload_filepath=${4:--}
+	local _github_content_type=${4:--}
+	local _github_payload_filepath=${5:--}
 
-	local _accept='application/vnd.github+json'
-	local _content_type='application/json'
+	local _github_accept=${GITHUB_DEFAULT_ACCEPT}
+	if [[ ${_github_content_type} == "-" ]]; then
+		_github_content_type=${GITHUB_DEFAULT_CONTENT_TYPE}
+	fi
 
 	# Check the pre-requisite environment variables have been set
 	if [ -z ${_github_api_url+x} ]; then
@@ -225,24 +334,24 @@ function github_exec {
 		pc_log "  github_exec ${_github_http_action} ${_github_http_uri}"
 		curl ${_silent} \
 			-X ${_github_http_action} \
-			-H "Content-Type: ${_content_type}" \
-			-H "Accept: ${_accept}" \
+			-H "Content-Type: ${_github_content_type}" \
+			-H "Accept: ${_github_accept}" \
 			-H "Authorization: Bearer ${_github_http_token}" \
 			-H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
 			${_github_api_url}${_github_http_uri} \
-			${@:5} \
+			${@:6} \
 			2>&1
 		_curl_exit_code=$?
 	else
 		pc_log "  github_exec ${_github_http_action} ${_github_http_uri} '${_github_payload_filepath}'"
 		curl ${_silent} \
 			-X ${_github_http_action} \
-			-H "Content-Type: ${_content_type}" \
-			-H "Accept: ${_accept}" \
+			-H "Content-Type: ${_github_content_type}" \
+			-H "Accept: ${_github_accept}" \
 			-H "Authorization: Bearer ${_github_http_token}" \
 			-H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
 			${_github_api_url}${_github_http_uri} \
-			${@:5} \
+			${@:6} \
 			-d @${_github_payload_filepath} \
 			2>&1
 		_curl_exit_code=$?
@@ -267,8 +376,9 @@ function github_get_page_count {
 	local _github_http_token=${2:--}
 	local _github_payload_filepath=${3:--}
 
-	local _accept='application/vnd.github+json'
-	local _content_type='application/json'
+	local _github_http_action="GET"
+	local _github_accept=${GITHUB_DEFAULT_ACCEPT}
+	local _github_content_type=${GITHUB_DEFAULT_CONTENT_TYPE}
 	local _page_count=1
 
 	# Check the pre-requisite environment variables have been set
@@ -276,7 +386,6 @@ function github_get_page_count {
 	    pc_log_fatal "ERROR: The environment variable _github_api_url must be configured prior to calling github_get_page_count!"
 	fi
 
-	_github_http_action="GET"
 	local _response_headers=""
 
 	# Specify the number of results per page if not already set
@@ -289,8 +398,8 @@ function github_get_page_count {
 	if [[ ${_github_payload_filepath} == "-" ]]; then
 		_response_headers=$(curl ${_silent} \
 			-X ${_github_http_action} \
-			-H "Content-Type: ${_content_type}" \
-			-H "Accept: ${_accept}" \
+			-H "Content-Type: ${_github_content_type}" \
+			-H "Accept: ${_github_accept}" \
 			-H "Authorization: Bearer ${_github_http_token}" \
 			-H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
 			-I ${_github_api_url}${_github_http_uri} \
@@ -306,8 +415,8 @@ function github_get_page_count {
 	else
 		_response_headers=$(curl ${_silent} \
 			-X ${_github_http_action} \
-			-H "Content-Type: ${_content_type}" \
-			-H "Accept: ${_accept}" \
+			-H "Content-Type: ${_github_content_type}" \
+			-H "Accept: ${_github_accept}" \
 			-H "Authorization: Bearer ${_github_http_token}" \
 			-H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
 			-I ${_github_api_url}${_github_http_uri} \
@@ -349,8 +458,8 @@ function github_get_page {
 	local _github_payload_filepath=${4:--}
 
 	local _github_http_action='GET'
-	local _accept='application/vnd.github+json'
-	local _content_type='application/json'
+	local _github_accept=${GITHUB_DEFAULT_ACCEPT}
+	local _gitgub_content_type=${GITHUB_DEFAULT_CONTENT_TYPE}
 
 	# Check the pre-requisite environment variables have been set
 	if [ -z ${_github_api_url+x} ]; then
@@ -367,8 +476,8 @@ function github_get_page {
 		pc_log "  github_get_page ${_github_http_action} ${_github_http_uri}&page=${_page}"
 		curl ${_silent} \
 			-X ${_github_http_action} \
-			-H "Content-Type: ${_content_type}" \
-			-H "Accept: ${_accept}" \
+			-H "Content-Type: ${_gitgub_content_type}" \
+			-H "Accept: ${_github_accept}" \
 			-H "Authorization: Bearer ${_github_http_token}" \
 			-H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
 			"${_github_api_url}${_github_http_uri}&page=${_page}" \
@@ -379,8 +488,8 @@ function github_get_page {
 		pc_log "  github_get_page ${_github_http_action} ${_github_http_uri} '${_github_payload_filepath}&page=${_page}'"
 		curl ${_silent} \
 			-X ${_github_http_action} \
-			-H "Content-Type: ${_content_type}" \
-			-H "Accept: ${_accept}" \
+			-H "Content-Type: ${_gitgub_content_type}" \
+			-H "Accept: ${_github_accept}" \
 			-H "Authorization: Bearer ${_github_http_token}" \
 			-H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
 			"${_github_api_url}${_github_http_uri}&page=${_page}" \
