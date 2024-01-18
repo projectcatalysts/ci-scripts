@@ -67,6 +67,22 @@ function gitlab_get_project_latest_pipeline {
 #
 # gitlab_get_project_pipeline_jobs
 #
+function gitlab_get_project_pipeline_for_commit {
+	local _token=${1}
+	local _project_id=${2}
+	local _commit_id=${3}
+	local _status=${4}
+
+	local _uri=$(gitlab_project_uri ${_project_id} /pipelines?sha=${_commit_id}\&status=${_status}\&per_page=1\&page=1)
+	local _response=$(gitlab_get ${_uri} ${_token})
+	gitlab_handle_error "Failed to get the project pipeline: ${_project_id}/${_commit_id}" "${_response}"
+	# Pipelines are sorted in descending order by default
+	jq '.[0]' <<< ${_response}
+}
+
+#
+# gitlab_get_project_pipeline_jobs
+#
 function gitlab_get_project_pipeline_jobs {
 	local _token=${1}
 	local _project_id=${2}
@@ -89,6 +105,37 @@ function gitlab_get_project_latest_release_tag {
 	local _response=$(gitlab_get ${_uri} ${_token})
 	gitlab_handle_error "Failed to get the project's latest release tag: ${_project_id}" "${_response}"
 	jq '.[0].tag_name' -r <<< ${_response}
+}
+
+# 
+# gitlab_get_release_build_job_id gets the job id for the latest successful build associated with a release
+#
+function gitlab_get_release_build_job_id {
+    local readonly _project_id=${1}
+	local readonly _project_name=${2}
+	local readonly _release_tag=${3}
+    local readonly _job_name=${4}
+
+    # get the release associated with the release tag
+    local _release=$(gitlab_get_project_release ${GL_TOKEN} ${_project_id} ${_release_tag}) || return $?
+
+    # get the commit associated with the release
+    local _release_commit_id=$(jq -r '.commit.id' <<< ${_release}) || return $?
+    pc_log "release commit id                 : ${_project_name}/${_release_tag} : ${_release_commit_id}"
+
+    # get the latest successful pipeline for this commit
+    local _pipeline=$(gitlab_get_project_pipeline_for_commit ${GL_TOKEN} ${_project_id} ${_release_commit_id} "success") || return $?
+    local _pipeline_id=$(jq '.id' <<< ${_pipeline}) || return $?
+    pc_log "latest pipeline id                : ${_project_name}/${_release_tag} : ${_pipeline_id}"
+
+    # get the jobs for the pipeline
+    local _pipeline_jobs=$(gitlab_get_project_pipeline_jobs ${GL_TOKEN} ${_project_id} ${_pipeline_id}) || return $?
+
+    # get the id of the build job
+    local _build_job_id=$(jq --arg jobName "${_job_name}" 'map(select( .name == $jobName )) | .[0].id' <<< ${_pipeline_jobs}) || return $?
+    pc_log "latest build job id               : ${_project_name}/${_release_tag} : ${_build_job_id}"
+
+    printf "${_build_job_id}"
 }
 
 #
@@ -121,6 +168,37 @@ function gitlab_get_project_latest_branch_tag {
 	printf "${_tag_name}"
 }
 
+#
+# gitlab_get_project_release
+#
+function gitlab_get_project_release {
+	local _token=${1}
+	local _project_id=${2}
+	local _release_tag=${3}
+
+	local _uri=$(gitlab_project_uri "${_project_id}/releases/${_release_tag}" )
+	local _response=$(gitlab_get ${_uri} ${_token})
+	gitlab_handle_error "Failed to get the project releases: ${_project_id}" "${_response}"
+	jq . <<< ${_response}
+}
+
+#
+# gitlab_get_project_release_artifact
+#
+function gitlab_get_project_release_artifact {
+	local _token=${1}
+	local _project_id=${2}
+	local _release_tag=${3}
+	local _artifact_path=${4}
+	local _artifact_name=${5}
+	local _artifact_file_path=${6}
+
+	# get the releases looking for the 
+	local _uri=$(gitlab_project_uri "${_project_id}/releases/${_release_tag}/downloads/${_artifact_path}${_artifact_name}")
+	set -x
+	curl --location --header "PRIVATE-TOKEN: ${_token}" "${_gitlab_api_url}${_uri}" -o "${_artifact_file_path}"
+	set +x
+}
 
 #
 # gitlab_trigger_project_pipeline_api1
