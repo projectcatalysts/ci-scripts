@@ -6,6 +6,8 @@ GITHUB_API_VERSION="2022-11-28"
 GITHUB_DEFAULT_PAGE_COUNT=30
 GITHUB_DEFAULT_ACCEPT='application/vnd.github+json'
 GITHUB_DEFAULT_CONTENT_TYPE='application/json'
+# https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints
+GITHUB_SSH_HOST_PUBLIC_KEY='|1|euws6XaVD4eb5bQ3anIOgExRTio=|ML1fwJrFCz1oUj166czbxXMWxxY= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl'
 
 # ---------------------------------------------------------------------
 # Settings
