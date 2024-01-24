@@ -44,6 +44,11 @@ function procat_ci_env_create_default_exports {
         pc_log "Setting environment default      : PROCAT_CI_DOWNLOAD_PATH   = ${PROCAT_CI_DOWNLOAD_PATH}"
     fi
 
+    if [ -z ${PROCAT_CI_SSH_GITHUB_PRIVATE_KEY_FILENAME+x} ]; then 
+        export PROCAT_CI_SSH_GITHUB_PRIVATE_KEY_FILENAME="${PROCAT_CI_SSH_PRIVATE_KEY_FILENAME}"
+        pc_log "Setting environment default      : PROCAT_CI_SSH_GITHUB_PRIVATE_KEY_FILENAME = ${PROCAT_CI_SSH_GITHUB_PRIVATE_KEY_FILENAME}"
+    fi
+
     if [ -z ${GPG_TTY+x} ]; then
         export GPG_TTY=$(tty)
         pc_log "Setting environment default      : GPG_TTY                   = \$(tty)"

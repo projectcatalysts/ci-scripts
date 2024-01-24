@@ -19,3 +19,4 @@
 | PROCAT_CI_SCRIPTS_REPO | ~/.procat_ci_env.sh | The URL of the repo that holds the Project Catalysts CI scripts. | git@gitlab.example.com:procat/ci-scripts.git | git@${PROCAT_CI_GIT_SERVER}:procat/ci-scripts.git |
 | PROCAT_CI_SCRIPTS_PATH | ~/.procat_ci_env.sh | Used for debugging,   the path where Project Catalysts CI scripts are located from. | ~/src/ci-scripts | ~/src/ci-scripts |
 | PROCAT_CI_SSH_PRIVATE_KEY_FILENAME | ~/.procat_ci_env.sh | The name of the private key file that will be added to the SSH agent, used for pulling dependent packages from the GIT server. | id_ed25519 | n/a - required |
+| PROCAT_CI_SSH_GITHUB_PRIVATE_KEY_FILENAME | ~/.procat_ci_env.sh | The name of the private key file to be added to the SSH agent for GitHub, used for pulling dependent packages from the GitHub servers. | id_ed25519 | ${PROCAT_CI_SSH_PRIVATE_KEY_FILENAME} |

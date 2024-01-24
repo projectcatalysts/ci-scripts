@@ -29,6 +29,12 @@ function ci_set_user_environment {
     export PROCAT_CI_SSH_PRIVATE_KEY_FILENAME="id_ed25519"
 
 	# (Optional)
+	# Specify The name of the private key file to be added to the SSH agent for GitHub,
+	# used for pulling dependent packages from the GitHub servers.. This file should
+	# reside in ~/.ssh/
+    # export PROCAT_CI_SSH_GITHUB_PRIVATE_KEY_FILENAME="id_github_ed25519"
+
+	# (Optional)
 	# Specify the ID of the GPG user that has been used to protect docker and registry passwords
 	# export PROCAT_CI_GPG_USER_ID=${USER}
 
