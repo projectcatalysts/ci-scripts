@@ -35,6 +35,11 @@ function ci_set_user_environment {
     # export PROCAT_CI_SSH_GITHUB_PRIVATE_KEY_FILENAME="id_github_ed25519"
 
 	# (Optional)
+	# PROCAT_CI_HOST_KEYS_URL can be specified as an HTTP server URL that returns directory listings
+	# in JSON format, such as caddy.  Refer to the alpine-bash and debian-bash projects for example usage.
+	# export PROCAT_CI_HOST_KEYS_URL="http://${PROCAT_CI_BUILD_SERVER}/host_keys/"
+
+	# (Optional)
 	# Specify the ID of the GPG user that has been used to protect docker and registry passwords
 	# export PROCAT_CI_GPG_USER_ID=${USER}
 
